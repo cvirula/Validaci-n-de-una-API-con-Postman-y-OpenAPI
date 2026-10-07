@@ -1,0 +1,744 @@
+{
+  "info": {
+    "name": "Pedidos - 12 casos",
+    "description": "Ejecutar completa, una iteración y en orden. PREP y LIMPIEZA no son casos. TC09 y TC12 requieren varias solicitudes. Los esquemas del cuerpo se extraen de openapi.json; no es una validación integral de OpenAPI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "PREP Preparar datos",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/test/reset",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "test",
+            "reset"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"PREP\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Preparacion', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"tokenA\", \"tokenB\", \"pedidosInicialesA\"], \"properties\": {\"tokenA\": {\"type\": \"string\", \"minLength\": 48}, \"tokenB\": {\"type\": \"string\", \"minLength\": 48}, \"pedidosInicialesA\": {\"type\": \"integer\", \"enum\": [3]}}}));",
+              "pm.environment.set('tokenA', data.tokenA);",
+              "pm.environment.set('tokenB', data.tokenB);",
+              "['pedidoId','pagina1','antes'].forEach(k => pm.environment.unset(k));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC01 Crear pedido válido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"productoId\": \"cuaderno\", \"cantidad\": 2}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC01\";",
+              "pm.test(id + ' | estado 201', () => pm.response.to.have.status(201));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Pedido', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}));",
+              "pm.test(id + ' | reglas de creación', () => { pm.expect(data.usuarioId).to.eql('usuario-a'); pm.expect(data.cantidad).to.eql(2); pm.expect(data.productoId).to.eql('cuaderno'); pm.expect(data.total).to.eql(50); pm.expect(data.estado).to.eql('pendiente'); pm.expect(data.cancelaciones).to.eql(0); });",
+              "if (pm.response.code === 201) pm.environment.set('pedidoId', data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC02 Consultar pedido creado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC02\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Pedido', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}));",
+              "pm.test(id + ' | persistencia', () => { pm.expect(data.id).to.eql(pm.environment.get('pedidoId')); pm.expect(data.cantidad).to.eql(2); pm.expect(Number(data.total)).to.eql(50); pm.expect(data.estado).to.eql('pendiente'); pm.expect(data.cancelaciones).to.eql(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC03 Cantidad inválida",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"productoId\": \"cuaderno\", \"cantidad\": 0}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC03\";",
+              "pm.test(id + ' | estado 400', () => pm.response.to.have.status(400));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | rechazo de datos', () => { pm.expect(data.error.code).to.eql('INVALID_BODY'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC04 Campo obligatorio ausente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"productoId\": \"cuaderno\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC04\";",
+              "pm.test(id + ' | estado 400', () => pm.response.to.have.status(400));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | rechazo de datos', () => { pm.expect(data.error.code).to.eql('INVALID_BODY'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC05 Sin credenciales",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC05\";",
+              "pm.test(id + ' | estado 401', () => pm.response.to.have.status(401));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | autenticación requerida', () => { pm.expect(data.error.code).to.eql('UNAUTHORIZED'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC06 Credencial inválida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenInvalido}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC06\";",
+              "pm.test(id + ' | estado 401', () => pm.response.to.have.status(401));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | credencial rechazada', () => { pm.expect(data.error.code).to.eql('UNAUTHORIZED'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC07 Acceso a pedido ajeno",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenB}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC07\";",
+              "pm.test(id + ' | estado 403', () => pm.response.to.have.status(403));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | permiso denegado', () => { pm.expect(data.error.code).to.eql('FORBIDDEN'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC08 Pedido inexistente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/inexistente",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "inexistente"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC08\";",
+              "pm.test(id + ' | estado 404', () => pm.response.to.have.status(404));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | recurso ausente', () => { pm.expect(data.error.code).to.eql('NOT_FOUND'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC09 Página 1",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos?page=1&limit=2",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC09\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema PaginaPedidos', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"items\", \"page\", \"limit\", \"total\"], \"properties\": {\"items\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}}, \"page\": {\"type\": \"integer\", \"minimum\": 1}, \"limit\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"integer\", \"minimum\": 0}}}));",
+              "pm.test(id + ' | página y efectos de creación', () => { pm.expect(data.page).to.eql(1); pm.expect(data.limit).to.eql(2); pm.expect(data.total).to.eql(4); pm.expect(data.items).to.have.lengthOf(2); data.items.forEach(p => pm.expect(p.usuarioId).to.eql('usuario-a')); });",
+              "pm.environment.set('pagina1', JSON.stringify(data.items.map(p => p.id))); pm.environment.set('antes', data.total);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC09 Página 2",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos?page=2&limit=2",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "2"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC09\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema PaginaPedidos', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"items\", \"page\", \"limit\", \"total\"], \"properties\": {\"items\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}}, \"page\": {\"type\": \"integer\", \"minimum\": 1}, \"limit\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"integer\", \"minimum\": 0}}}));",
+              "pm.test(id + ' | sin duplicados ni pedidos ajenos', () => { const primero = JSON.parse(pm.environment.get('pagina1')); pm.expect(data.page).to.eql(2); pm.expect(data.total).to.eql(4); pm.expect(data.items).to.have.lengthOf(2); data.items.forEach(p => { pm.expect(primero).not.to.include(p.id); pm.expect(p.usuarioId).to.eql('usuario-a'); }); pm.expect(data.items.map(p => p.id)).to.include(pm.environment.get('pedidoId')); pm.expect(new Set([...primero, ...data.items.map(p => p.id)]).size).to.eql(4); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC10 Paginación inválida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos?page=0&limit=2",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC10\";",
+              "pm.test(id + ' | estado 400', () => pm.response.to.have.status(400));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Error', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"error\"], \"properties\": {\"error\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"code\", \"message\"], \"properties\": {\"code\": {\"type\": \"string\", \"enum\": [\"INVALID_BODY\", \"INVALID_PRODUCT\", \"INVALID_PAGINATION\", \"UNAUTHORIZED\", \"FORBIDDEN\", \"NOT_FOUND\", \"UNSUPPORTED_MEDIA_TYPE\"]}, \"message\": {\"type\": \"string\", \"minLength\": 1}}}}}));",
+              "pm.test(id + ' | parámetro rechazado', () => { pm.expect(data.error.code).to.eql('INVALID_PAGINATION'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC11 Cancelar pedido",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/cancelacion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}",
+            "cancelacion"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"estado\": \"cancelado\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC11\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Pedido', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}));",
+              "pm.test(id + ' | primera transición', () => { pm.expect(data.id).to.eql(pm.environment.get('pedidoId')); pm.expect(data.estado).to.eql('cancelado'); pm.expect(data.cancelaciones).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC12 Repetir cancelación",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/cancelacion",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}",
+            "cancelacion"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"estado\": \"cancelado\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC12\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Pedido', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}));",
+              "pm.test(id + ' | repetición', () => { pm.expect(data.id).to.eql(pm.environment.get('pedidoId')); pm.expect(data.estado).to.eql('cancelado'); pm.expect(data.cancelaciones).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC12 Consultar efecto final",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos",
+            "{{pedidoId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC12\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Pedido', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}));",
+              "pm.test(id + ' | efecto persistido una sola vez', () => { pm.expect(data.id).to.eql(pm.environment.get('pedidoId')); pm.expect(data.estado).to.eql('cancelado'); pm.expect(data.cancelaciones).to.eql(1); pm.expect(data.cantidad).to.eql(2); pm.expect(Number(data.total)).to.eql(50); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TC12 Verificar cantidad de pedidos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{tokenA}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pedidos?page=1&limit=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "pedidos"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"TC12\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema PaginaPedidos', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"items\", \"page\", \"limit\", \"total\"], \"properties\": {\"items\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"id\", \"usuarioId\", \"productoId\", \"cantidad\", \"total\", \"estado\", \"cancelaciones\"], \"properties\": {\"id\": {\"type\": \"string\", \"pattern\": \"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\"}, \"usuarioId\": {\"type\": \"string\", \"enum\": [\"usuario-a\", \"usuario-b\"]}, \"productoId\": {\"type\": \"string\", \"enum\": [\"cuaderno\"]}, \"cantidad\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"number\", \"minimum\": 25, \"maximum\": 250}, \"estado\": {\"type\": \"string\", \"enum\": [\"pendiente\", \"cancelado\"]}, \"cancelaciones\": {\"type\": \"integer\", \"minimum\": 0, \"maximum\": 1}}}}, \"page\": {\"type\": \"integer\", \"minimum\": 1}, \"limit\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10}, \"total\": {\"type\": \"integer\", \"minimum\": 0}}}));",
+              "pm.test(id + ' | sin pedidos nuevos y sin efectos negativos', () => { pm.expect(data.total).to.eql(Number(pm.environment.get('antes'))); pm.expect(data.total).to.eql(4); pm.expect(data.items).to.have.lengthOf(4); const p = data.items.find(p => p.id === pm.environment.get('pedidoId')); pm.expect(p.estado).to.eql('cancelado'); pm.expect(p.cancelaciones).to.eql(1); data.items.filter(p => p.id !== pm.environment.get('pedidoId')).forEach(p => { pm.expect(p.estado).to.eql('pendiente'); pm.expect(p.cancelaciones).to.eql(0); }); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "LIMPIEZA Reiniciar y borrar variables",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/test/reset",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "test",
+            "reset"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "const id = \"LIMPIEZA\";",
+              "pm.test(id + ' | estado 200', () => pm.response.to.have.status(200));",
+              "pm.test(id + ' | Content-Type JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test(id + ' | esquema Preparacion', () => pm.response.to.have.jsonSchema({\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"tokenA\", \"tokenB\", \"pedidosInicialesA\"], \"properties\": {\"tokenA\": {\"type\": \"string\", \"minLength\": 48}, \"tokenB\": {\"type\": \"string\", \"minLength\": 48}, \"pedidosInicialesA\": {\"type\": \"integer\", \"enum\": [3]}}}));",
+              "['tokenA','tokenB','pedidoId','pagina1','antes'].forEach(k => pm.environment.unset(k));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
